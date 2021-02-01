@@ -1,0 +1,70 @@
+node ('master') {
+    
+    node('Kubernetes_Master'){
+    
+        stage('Code Clone - GIT') {
+		try{
+    
+    	    git 'https://github.com/dryice-devops/microservices-demo.git'
+			}
+			catch(e){
+				 
+					echo("**************************Inside Code Clone - GIT Exception **************************")               						
+					throw e
+					   
+				}
+			
+        }// end Code Clone - GIT
+		
+		stage('Create Cluster - EKS') {
+			
+			echo("************************** Cluster - EKS Start**************************")
+			try{
+			sh "cd /home/EKS_CLUSTER/kub_azure && terraform init –upgrade && terraform apply -var cluster-name1= Prometheus -var aws-region= us-east-1  -var node-instance-type= t3.xlarge -var KeyName=terraform  --lock=false –auto-approve"
+			}
+			catch(e){
+				 
+					echo("**************************Inside Create Cluster - EKS Exception**************************")               						
+					throw e
+					   
+				}
+			echo ("**************CLUSTER CREATED ****************")
+		
+		}// end Create Cluster - EKS
+		
+		stage('Deploy Sysdig Agent On - EKS') {
+			
+			echo("************************** Deploy Sysdig Agent On - EKS Start**************************")
+			try{
+			sh "/home/EKS_CLUSTER/sysdig_agent.sh Prometheus"
+
+			}
+			catch(e){
+				 
+					echo("**************************Inside Deploy Sysdig Agent On - EKS Exception**************************")               						
+					throw e
+					   
+				}
+			echo ("**************Deploy Sysdig Agent Done ****************")
+		
+		}// end Deploy Sysdig Agent On - EKS
+		
+		stage('Deploy Application On - EKS') {
+			
+			echo("************************** App Deployment - EKS Start**************************")
+			try{
+			sh "kubectl apply -f '${WORKSPACE}/deploy/kubernetes/complete-demo.yaml' --kubeconfig=/home/EKS_CLUSTER/kubeconfig"
+			}
+			catch(e){
+				 
+					echo("**************************Inside Deploy Application On - EKS Exception**************************")               						
+					throw e
+					   
+				}
+			
+			echo ("**************CLUSTER CREATED ****************")
+		
+		}// end Deploy Application On - EKS
+    }// end Kubernetes_Master Node
+    
+}//end master node
